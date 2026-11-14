@@ -92,7 +92,10 @@ async function connect() {
   let stage = '기기 선택';
   let selected = null;
   try {
-    selected = await navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE] }], optionalServices: [SERVICE] });
+    selected = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [SERVICE]
+    });
     device = selected;
     device.addEventListener('gattserverdisconnected', disconnected);
     stage = 'GATT 연결';
