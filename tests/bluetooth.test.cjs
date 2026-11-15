@@ -34,7 +34,7 @@ function setup(failureStage) {
       } };
     }
   };
-  const context = vm.createContext({ TextDecoder, TextEncoder, Date, window: { isSecureContext: true }, navigator: { bluetooth: {
+  const context = vm.createContext({ TextDecoder, TextEncoder, Date, window: { isSecureContext: true, confirm: () => true }, navigator: { bluetooth: {
     async requestDevice(options) {
       assert.equal(options.acceptAllDevices, true);
       assert.ok(options.optionalServices.includes('6e400001-b5a3-f393-e0a9-e50e24dcca9e'));
@@ -82,6 +82,38 @@ test('KST RTC write is exactly one short UART command and requires a device ackn
   assert.match(el['sync-status'].textContent, /확인 완료/);
   el.disconnect.listeners.click();
   assert.equal(el['sync-time'].disabled, true);
+});
+
+test('study records: full snapshot, no double counting, incomplete frame is rejected', async () => {
+  const { elements: el, emit, written } = setup();
+  await el.connect.listeners.click();
+  await el['get-records'].listeners.click();
+  assert.equal(written.at(-1), 'R\n');
+  emit(Buffer.from('BEGIN:20261115\r\nREC:20261114:300\r\n'));
+  emit(Buffer.from('REC:20261115:360\r\nEND:2\r\n'));
+  assert.equal(el.days.children.length, 2);
+  assert.match(el.days.children[0].textContent, /2026-11-15.*00h 06m 00s/);
+  assert.match(el.days.children[1].textContent, /2026-11-14.*00h 05m 00s/);
+  // Same cumulative snapshot is a replacement, never a second addition.
+  emit(Buffer.from('BEGIN:20261115\nREC:20261115:360\nREC:20261114:300\nEND:2\n'));
+  assert.equal(el.days.children.length, 2);
+  assert.match(el.days.children[0].textContent, /00h 06m 00s/);
+  // Partial snapshot must not replace last complete records.
+  emit(Buffer.from('BEGIN:20261115\nREC:20261115:600\nEND:2\n'));
+  assert.match(el['records-status'].textContent, /수신 불완전/);
+  assert.match(el.days.children[0].textContent, /00h 06m 00s/);
+});
+
+test('5am boundary test button writes X and receives the ACK', async () => {
+  const { elements: el, emit, written } = setup();
+  await el.connect.listeners.click();
+  assert.equal(el['boundary-test'].disabled, false);
+  await el['boundary-test'].listeners.click();
+  assert.equal(written.at(-1), 'X\n');
+  emit(Buffer.from('TEST:OK\r\n'));
+  assert.match(el['boundary-status'].textContent, /04:59:30/);
+  emit(Buffer.from('SYNC:OK\r\n'));
+  assert.match(el['boundary-status'].textContent, /한국 시간/);
 });
 
 test('cancel and notification failures allow retry and close GATT', async () => {
