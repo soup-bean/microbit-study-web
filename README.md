@@ -49,3 +49,17 @@ UTF-8 스트리밍 디코더로 바이트 분할을 처리하고 LF 또는 CRLF�
 - 자동 재연결은 하지 않습니다. 사용자가 연결 버튼으로 다시 선택합니다. 재연결 시 최신 수신값과 미완성 버퍼를 초기화합니다. 해제 후 남아 있는 최신값은 이전 세션 값입니다.
 - OS 절전, 화면 잠금, 전파 간섭에 따른 연결·수신 안정성은 실제 장비에서 검증해야 합니다. 앱은 통신 로그를 영구 저장하지 않습니다.
 - 현재 검증은 로컬 정적 파일 응답과 모의 GATT 테스트에 한정됩니다. 실제 Android/micro:bit 통신 및 GitHub Pages 배포 성공은 확인되지 않았습니다.
+
+
+## RTC 시간 동기화 (2단계 실험)
+
+- firmware/rtc-sync-test.ts의 MakeCode 코드를 새 프로젝트에 붙여 넣고 Bluetooth, FlashStorage, DS1302 확장을 추가합니다.
+- MakeCode Project Settings에서 **No Pairing Required**를 활성화합니다.
+- 마이크로비트 RTC 배선: VCC→3.3V, GND→GND, CLK→P13, DAT→P14, RST→P15.
+- 웹사이트에서 Bluetooth를 연결하면 **RTC 시간 동기화** 버튼이 활성화됩니다.
+- 사용자가 직접 버튼을 누르면 현재 휴대폰 시각을 **Asia/Seoul (UTC+9)** 기준으로 전송합니다.
+- 장치가 \`SYNC:OK\`를 보내면 웹에 완료 표시가 나타납니다. B 버튼을 누르면 \`DATE:\`, \`TIME:\` 메시지로 보정 결과를 확인합니다.
+- UART 송신 특성: 6e400003-b5a3-f393-e0a9-e50e24dcca9e (WRITE/WRITE WITHOUT RESPONSE).
+- 명령 형식: \`T:YYYYMMDDHHMMSSW\n\` (총 18 ASCII bytes, 요일은 일=1…토=7).
+- 아직 오전 5시 날짜 경계 처리, 학습시간 누적, IndexedDB 저장은 구현하지 않았습니다.
+- **보안**: No Pairing Required는 근처의 다른 BLE 클라이언트도 연결 및 UART 명령 전송을 시도할 수 있습니다. 시험 환경에서만 사용하고 최종 배포 시 페어링/권한 설계를 재검토하세요.
