@@ -94,7 +94,7 @@ function addStudy(amount: number) {
     let after = Math.min(86400, before + amount)
     // Write only when the user explicitly adds time; no flash writes in the loop.
     // flashstorage.cpp reads values as C strings; write an explicit NUL.
-    let payload = day + "," + after + "|" + "\\u0000"
+    let payload = day + "," + after + "|" + "\u0000"
     flashstorage.put(storageKey(slotOf(day)), payload)
     if (readStudy(day) != after) {
         basic.showString("E")
