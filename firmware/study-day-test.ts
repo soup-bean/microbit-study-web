@@ -93,10 +93,25 @@ function addStudy(amount: number) {
     let before = readStudy(day)
     let after = Math.min(86400, before + amount)
     // Write only when the user explicitly adds time; no flash writes in the loop.
-    flashstorage.put(storageKey(slotOf(day)), day + "," + after + "|")
+    // flashstorage.cpp reads values as C strings; write an explicit NUL.
+    let payload = day + "," + after + "|" + "\u0000"
+    flashstorage.put(storageKey(slotOf(day)), payload)
     if (readStudy(day) != after) {
         basic.showString("E")
-        if (connected) bluetooth.uartWriteLine("ERR:STORE")
+        if (connected) {
+            let raw = flashstorage.get(storageKey(slotOf(day)))
+            bluetooth.uartWriteLine("ERR:STORE")
+            basic.pause(160)
+            bluetooth.uartWriteLine("DBG:DAY:" + day)
+            basic.pause(160)
+            bluetooth.uartWriteLine("DBG:KEY:" + storageKey(slotOf(day)))
+            basic.pause(160)
+            bluetooth.uartWriteLine("DBG:L:" + raw.length)
+            basic.pause(160)
+            bluetooth.uartWriteLine("DBG:1:" + raw.substr(0, 10))
+            basic.pause(160)
+            bluetooth.uartWriteLine("DBG:2:" + raw.substr(10, 10))
+        }
         return
     }
     basic.showString("+" + amount)
