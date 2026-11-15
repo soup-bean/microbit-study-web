@@ -3,14 +3,17 @@
 // github:makecode-extensions/DS1302. Settings: No Pairing Required.
 // RTC wiring CLK=P13, DAT=P14, RST=P15; power=3.3V, GND.
 // TEST FIRMWARE: A adds 300 seconds, A+B adds 60 seconds (no sensors yet).
-// Keys D0..D6 store seven rolling calendar-day slots, values YYYYMMDD,seconds|.
-// Firmware reflash can erase flash records. Existing rtc_combo key is untouched.
+// A SINGLE key H stores seven days at second precision in 30-byte compact format.
+// Firmware reflash may erase records. Old disposable TEST keys are migrated/removed on first boot.
 
 let rtc = DS1302.create(DigitalPin.P13, DigitalPin.P14, DigitalPin.P15)
 let connected = false
 let sending = false
 let activeDay = 0
+let savedAnchor = 0
+let savedSeconds: number[] = []
 const DAYS = 7
+const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
 
 function two(n: number): string {
     if (n < 10) return "0" + n
@@ -66,51 +69,131 @@ function studyDate(): number {
     if (!validDate(y, m, d)) return 0
     return y * 10000 + m * 100 + d
 }
-function storageKey(slot: number): string {
-    return "D" + slot
+function prevDate(key: number): number {
+    let y = Math.idiv(key, 10000)
+    let m = Math.idiv(key % 10000, 100)
+    let d = key % 100 - 1
+    if (d == 0) {
+        m -= 1
+        if (m == 0) { y -= 1; m = 12 }
+        d = monthDays(y, m)
+    }
+    return y * 10000 + m * 100 + d
 }
-function slotOf(dateKey: number): number {
-    return keySerial(dateKey) % DAYS
+function blankSeconds(): number[] {
+    let values: number[] = []
+    for (let i = 0; i < DAYS; i++) values.push(0)
+    return values
 }
-function readStudy(dateKey: number): number {
-    let serialDay = keySerial(dateKey)
-    if (serialDay < 0) return 0
-    let raw = flashstorage.get(storageKey(serialDay % DAYS)).split("|")[0]
-    let fields = raw.split(",")
-    if (fields.length != 2 || fields[0] != "" + dateKey || fields[1] == "") return 0
-    let seconds = parseInt(fields[1])
-    if (seconds < 0 || seconds > 86400) return 0
-    return seconds
+function encodeSeconds(seconds: number): string {
+    let n = Math.max(0, Math.min(86400, seconds))
+    return ALPHABET.charAt(Math.idiv(n, 4096)) +
+        ALPHABET.charAt(Math.idiv(n % 4096, 64)) +
+        ALPHABET.charAt(n % 64)
+}
+function decodeSeconds(text: string): number {
+    if (text.length != 3) return -1
+    let a = ALPHABET.indexOf(text.charAt(0))
+    let b = ALPHABET.indexOf(text.charAt(1))
+    let c = ALPHABET.indexOf(text.charAt(2))
+    if (a < 0 || b < 0 || c < 0) return -1
+    let n = a * 4096 + b * 64 + c
+    return n <= 86400 ? n : -1
+}
+function loadHistory(): boolean {
+    savedAnchor = 0
+    savedSeconds = blankSeconds()
+    let parts = flashstorage.get("H").split("|")
+    if (parts.length < 2 || parts[0].length != 6 || parts[1].length != 21) return false
+    for (let j = 0; j < parts[0].length; j++) {
+        let ch = parts[0].charAt(j)
+        if (ch < "0" || ch > "9") return false
+    }
+    let key = 20000000 + parseInt(parts[0])
+    if (keySerial(key) < 0) return false
+    let values = blankSeconds()
+    for (let i = 0; i < DAYS; i++) {
+        let n = decodeSeconds(parts[1].substr(i * 3, 3))
+        if (n < 0) return false
+        values[i] = n
+    }
+    savedAnchor = key
+    savedSeconds = values
+    return true
+}
+function saveHistory(): boolean {
+    if (keySerial(savedAnchor) < 0 || savedSeconds.length != DAYS) return false
+    // YYMMDD + | + seven 3-char values + | + NUL = 30 bytes, below 32-byte limit.
+    let payload = "" + (savedAnchor - 20000000) + "|"
+    for (let i = 0; i < DAYS; i++) payload += encodeSeconds(savedSeconds[i])
+    payload += "|" + "\u0000"
+    flashstorage.put("H", payload)
+    let written = flashstorage.get("H").split("|")
+    if (written.length < 2) return false
+    return written[0] == "" + (savedAnchor - 20000000) && written[1] == payload.split("|")[1]
+}
+function oldStudy(dateKey: number): number {
+    let serial = keySerial(dateKey)
+    if (serial < 0) return 0
+    let fields = flashstorage.get("D" + serial % DAYS).split("|")[0].split(",")
+    if (fields.length != 2 || fields[0] != "" + dateKey) return 0
+    let n = parseInt(fields[1])
+    return n >= 0 && n <= 86400 ? n : 0
+}
+function initStorage() {
+    let today = studyDate()
+    if (today == 0) return
+    let hasHistory = loadHistory()
+    let oldValues = blankSeconds()
+    let found = false
+    if (!hasHistory) {
+        let day = today
+        for (let i = 0; i < DAYS; i++) {
+            oldValues[i] = oldStudy(day)
+            if (oldValues[i] > 0) found = true
+            day = prevDate(day)
+        }
+    }
+    // Remove only prior project TEST keys, never unrelated system keys.
+    // Old test records are migrated first if they can be read.
+    for (let i = 0; i < DAYS; i++) flashstorage.remove("D" + i)
+    flashstorage.remove("test_value")
+    flashstorage.remove("rtc_combo")
+    if (!hasHistory && found) {
+        savedAnchor = today
+        savedSeconds = oldValues
+        saveHistory()
+    }
 }
 function addStudy(amount: number) {
     if (sending) return
     let day = studyDate()
-    if (day == 0) {
-        basic.showString("RTC?")
+    if (day == 0) { basic.showString("RTC?"); return }
+    activeDay = day
+    if (!loadHistory()) { savedAnchor = day; savedSeconds = blankSeconds() }
+    let delta = keySerial(day) - keySerial(savedAnchor)
+    if (delta > 0) {
+        let shifted = blankSeconds()
+        if (delta < DAYS) {
+            for (let i = delta; i < DAYS; i++) shifted[i] = savedSeconds[i - delta]
+        }
+        savedSeconds = shifted
+        savedAnchor = day
+    } else if (delta < -(DAYS - 1)) {
+        basic.showString("OLD")
+        if (connected) bluetooth.uartWriteLine("ERR:OLD")
         return
     }
-    activeDay = day
-    let before = readStudy(day)
-    let after = Math.min(86400, before + amount)
-    // Write only when the user explicitly adds time; no flash writes in the loop.
-    // flashstorage.cpp reads values as C strings; write an explicit NUL.
-    let payload = day + "," + after + "|" + "\u0000"
-    flashstorage.put(storageKey(slotOf(day)), payload)
-    if (readStudy(day) != after) {
+    let index = keySerial(savedAnchor) - keySerial(day)
+    savedSeconds[index] = Math.min(86400, savedSeconds[index] + amount)
+    if (!saveHistory()) {
         basic.showString("E")
         if (connected) {
-            let raw = flashstorage.get(storageKey(slotOf(day)))
             bluetooth.uartWriteLine("ERR:STORE")
-            basic.pause(160)
-            bluetooth.uartWriteLine("DBG:DAY:" + day)
-            basic.pause(160)
-            bluetooth.uartWriteLine("DBG:KEY:" + storageKey(slotOf(day)))
-            basic.pause(160)
-            bluetooth.uartWriteLine("DBG:L:" + raw.length)
-            basic.pause(160)
-            bluetooth.uartWriteLine("DBG:1:" + raw.substr(0, 10))
-            basic.pause(160)
-            bluetooth.uartWriteLine("DBG:2:" + raw.substr(10, 10))
+            basic.pause(140)
+            bluetooth.uartWriteLine("DBG:SIZE:" + flashstorage.size())
+            basic.pause(140)
+            bluetooth.uartWriteLine("DBG:H:" + flashstorage.get("H").length)
         }
         return
     }
@@ -126,44 +209,37 @@ function getClockTime(): string {
 function sendRecords() {
     if (!connected || sending) return
     let today = studyDate()
-    if (today == 0) {
-        bluetooth.uartWriteLine("ERR:RTC")
-        return
-    }
+    if (today == 0) { bluetooth.uartWriteLine("ERR:RTC"); return }
     sending = true
-    activeDay = today
-    let serialToday = keySerial(today)
-    let count = 0
+    let hasHistory = loadHistory()
     let foundToday = false
+    let sent = 0
+    let todaySerial = keySerial(today)
     bluetooth.uartWriteLine("DATE:" + getClockDate())
-    basic.pause(120)
+    basic.pause(140)
     bluetooth.uartWriteLine("TIME:" + getClockTime())
-    basic.pause(120)
+    basic.pause(140)
     bluetooth.uartWriteLine("BEGIN:" + today)
-    basic.pause(120)
-    for (let slot = 0; slot < DAYS; slot++) {
-        let raw = flashstorage.get(storageKey(slot)).split("|")[0]
-        let parts = raw.split(",")
-        if (parts.length == 2 && parts[1] != "") {
-            let day = parseInt(parts[0])
-            let number = parseInt(parts[1])
-            let serial = keySerial(day)
-            // Reject a corrupt entry, an expired entry or a mismatched slot.
-            if (serial >= serialToday - 6 && serial <= serialToday &&
-                serial % DAYS == slot && number >= 0 && number <= 86400) {
-                bluetooth.uartWriteLine("REC:" + day + ":" + number)
+    basic.pause(140)
+    if (hasHistory) {
+        let day = savedAnchor
+        for (let i = 0; i < DAYS; i++) {
+            let age = todaySerial - keySerial(day)
+            if (age >= 0 && age < DAYS && (savedSeconds[i] > 0 || day == today)) {
+                bluetooth.uartWriteLine("REC:" + day + ":" + savedSeconds[i])
+                sent += 1
                 if (day == today) foundToday = true
-                count += 1
-                basic.pause(140)
+                basic.pause(160)
             }
+            day = prevDate(day)
         }
     }
     if (!foundToday) {
         bluetooth.uartWriteLine("REC:" + today + ":0")
-        count += 1
-        basic.pause(140)
+        sent += 1
+        basic.pause(160)
     }
-    bluetooth.uartWriteLine("END:" + count)
+    bluetooth.uartWriteLine("END:" + sent)
     sending = false
 }
 function validClockCommand(command: string): boolean {
@@ -248,6 +324,7 @@ input.onButtonPressed(Button.B, function () {
     sendRecords()
 })
 bluetooth.startUartService()
+initStorage()
 activeDay = studyDate()
 basic.forever(function () {
     // Automatic 05:00 rollover of the active date; does not write flash.
