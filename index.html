@@ -17,14 +17,21 @@
       <div class="actions"><button id="connect" type="button">Bluetooth 연결</button><button id="disconnect" class="secondary" type="button" disabled>연결 해제</button></div>
       <p class="hint">Android Chrome · HTTPS 필요 · nRF Connect 연결은 먼저 해제하세요.</p>
     </section>
+    <section aria-labelledby="time-sync-title">
+      <h2 id="time-sync-title">02 RTC 시간 동기화</h2>
+      <p>휴대폰의 현재 시각을 <strong>한국 표준시(UTC+9)</strong>로 계산해 마이크로비트 DS1302에 보냅니다.</p>
+      <div class="actions"><button id="sync-time" type="button" disabled>RTC 시간 동기화</button></div>
+      <p id="sync-status" role="status" aria-live="polite">연결 후 동기화할 수 있습니다.</p>
+      <p class="hint">자동 동기화는 하지 않습니다. 기기에서 SYNC:OK 응답을 받아야 완료로 표시됩니다. 휴대폰 시각이 정확해야 합니다.</p>
+    </section>
     <section class="reading" aria-labelledby="reading-title">
-      <h2 id="reading-title">02 최신 수신 메시지</h2>
+      <h2 id="reading-title">03 최신 수신 메시지</h2>
       <output id="latest" aria-live="polite">수신 대기</output>
       <p id="received-at">완성된 줄을 수신하면 여기에 표시합니다.</p>
       <p class="hint">연결을 새로 시작하면 이전 수신값이 초기화됩니다.</p>
     </section>
     <section aria-labelledby="log-title">
-      <div class="section-heading"><h2 id="log-title">03 통신 로그</h2><button id="clear" class="text-button" type="button">로그 지우기</button></div>
+      <div class="section-heading"><h2 id="log-title">04 통신 로그</h2><button id="clear" class="text-button" type="button">로그 지우기</button></div>
       <p class="hint">메모리에 최근 300건만 표시합니다. 조각 수신도 기록하며, 완성 메시지는 LF / CRLF 줄바꿈으로 구분합니다.</p>
       <ol id="log" aria-label="통신 로그"></ol>
     </section>
