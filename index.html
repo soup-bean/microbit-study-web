@@ -24,18 +24,32 @@
       <p id="sync-status" role="status" aria-live="polite">연결 후 동기화할 수 있습니다.</p>
       <p class="hint">자동 동기화는 하지 않습니다. 기기에서 SYNC:OK 응답을 받아야 완료로 표시됩니다. 휴대폰 시각이 정확해야 합니다.</p>
     </section>
+    <section aria-labelledby="days-title">
+      <h2 id="days-title">03 최근 7일 공부 시간 · 시험</h2>
+      <p class="hint">마이크로비트 A: +5분, A+B: +1분, B: 날짜별 기록 전송. 실제 센서 측정은 아직 아닙니다.</p>
+      <div class="actions"><button id="get-records" type="button" disabled>저장 기록 가져오기</button></div>
+      <p id="records-status" role="status" aria-live="polite">연결 후 B 버튼 또는 기록 요청 버튼으로 읽을 수 있습니다.</p>
+      <ol id="days" aria-label="날짜별 공부 시간"></ol>
+      <p class="hint">날짜별 누적값을 교체 표시하며 중복 합산하지 않습니다. 아직 웹에 영구 저장하지 않으므로 새로고침 시 사라집니다.</p>
+      <details class="test-options">
+        <summary>고급 · 오전 5시 날짜 변경 시험</summary>
+        <p class="hint">RTC를 시험용 04:59:30으로 바꿉니다. 05:00 전후에 A/B로 기록을 확인하고, 끝나면 반드시 RTC 시간 동기화 버튼으로 실제 한국 시각을 복원하세요. 시험용 시간도 FlashStorage에 저장됩니다.</p>
+        <button id="boundary-test" class="secondary" type="button" disabled>RTC를 04:59:30으로 설정</button>
+        <p id="boundary-status" role="status">시험 미실행</p>
+      </details>
+    </section>
     <section class="reading" aria-labelledby="reading-title">
-      <h2 id="reading-title">03 최신 수신 메시지</h2>
+      <h2 id="reading-title">04 최신 수신 메시지</h2>
       <output id="latest" aria-live="polite">수신 대기</output>
       <p id="received-at">완성된 줄을 수신하면 여기에 표시합니다.</p>
       <p class="hint">연결을 새로 시작하면 이전 수신값이 초기화됩니다.</p>
     </section>
     <section aria-labelledby="log-title">
-      <div class="section-heading"><h2 id="log-title">04 통신 로그</h2><button id="clear" class="text-button" type="button">로그 지우기</button></div>
+      <div class="section-heading"><h2 id="log-title">05 통신 로그</h2><button id="clear" class="text-button" type="button">로그 지우기</button></div>
       <p class="hint">메모리에 최근 300건만 표시합니다. 조각 수신도 기록하며, 완성 메시지는 LF / CRLF 줄바꿈으로 구분합니다.</p>
       <ol id="log" aria-label="통신 로그"></ol>
     </section>
-    <footer>통신 검증 전용 · 데이터를 저장하거나 외부로 전송하지 않습니다.</footer>
+    <footer>시험용 누적값은 micro:bit FlashStorage에 저장됩니다. 웹사이트의 기록 표시는 메모리에만 유지되며 외부 서버로 전송하지 않습니다.</footer>
   </main>
 </body>
 </html>
