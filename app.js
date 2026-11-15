@@ -9,6 +9,7 @@ let device = null;
 let receiver = null;
 let sender = null;
 let syncing = false;
+let syncAckReceived = false;
 let connecting = false;
 let ready = false;
 let decoder = new TextDecoder('utf-8');
@@ -45,6 +46,7 @@ function cleanup() {
   receiver = null;
   sender = null;
   syncing = false;
+  syncAckReceived = false;
   device = null;
   ready = false;
   resetStream();
@@ -71,8 +73,10 @@ function receive(event) {
         ui['received-at'].textContent = `마지막 수신: ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`;
         log('수신', message);
         if (message === 'SYNC:OK') {
+          syncAckReceived = true;
           ui['sync-status'].textContent = 'RTC 동기화 확인 완료 — 마이크로비트가 적용을 확인했습니다.';
         } else if (message === 'SYNC:ERR') {
+          syncAckReceived = true;
           ui['sync-status'].textContent = 'RTC 동기화 실패 — 마이크로비트가 명령을 거부했습니다.';
         }
       }
@@ -108,6 +112,7 @@ function kstTimeCommand(now) {
 async function syncRtc() {
   if (!ready || !sender || syncing || !device?.gatt.connected) return;
   syncing = true;
+  syncAckReceived = false;
   state('connected', '연결 성공', ui.detail.textContent);
   ui['sync-status'].textContent = '휴대폰의 한국 표준시를 전송하고 있습니다…';
   try {
@@ -122,7 +127,7 @@ async function syncRtc() {
       throw new Error('쓰기 가능한 UART 특성이 아닙니다.');
     }
     log('송신', command.trim());
-    ui['sync-status'].textContent = '전송 완료 · 마이크로비트의 SYNC:OK 응답을 기다리는 중입니다.';
+    if (!syncAckReceived) ui['sync-status'].textContent = '전송 완료 · 마이크로비트의 SYNC:OK 응답을 기다리는 중입니다.';
   } catch (error) {
     const detail = '시간 전송 실패: ' + (error.message || String(error));
     ui['sync-status'].textContent = detail;
