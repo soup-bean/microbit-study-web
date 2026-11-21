@@ -187,6 +187,28 @@ let bootMs = input.runningTime()
 pins.digitalWritePin(DigitalPin.P1, 0)
 pins.setPull(DigitalPin.P8, PinPullMode.PullDown)
 
+function keyFromSerial(serial: number): number {
+    if (serial < 0) return 0
+    let y = 2020
+    while (y <= 2099) {
+        let daysInYear = isLeap(y) ? 366 : 365
+        if (serial < daysInYear) break
+        serial -= daysInYear
+        y += 1
+    }
+    if (y > 2099) return 0
+    let m = 1
+    while (m <= 12 && serial >= monthDays(y, m)) {
+        serial -= monthDays(y, m)
+        m += 1
+    }
+    if (m > 12) return 0
+    return y * 10000 + m * 100 + serial + 1
+}
+function studyDayFromEpoch(epoch: number): number {
+    if (epoch < FIVE_AM_SECONDS) return 0
+    return keyFromSerial(Math.idiv(epoch - FIVE_AM_SECONDS, 86400))
+}
 function clockEpoch(): number {
     let y = rtc.getYear()
     let m = rtc.getMonth()
@@ -237,7 +259,7 @@ function creditDay(dayKey: number, seconds: number) {
 // so elapsed seconds immediately before 05:00 belong to yesterday.
 function creditInterval(startEpoch: number, endEpoch: number) {
     if (startEpoch < 0 || endEpoch <= startEpoch || endEpoch - startEpoch > 60) return
-    let endDay = studyDate()
+    let endDay = studyDayFromEpoch(endEpoch)
     if (endDay == 0) return
     let boundary = Math.idiv(endEpoch - FIVE_AM_SECONDS, 86400) * 86400 + FIVE_AM_SECONDS
     if (startEpoch < boundary && boundary <= endEpoch) {
