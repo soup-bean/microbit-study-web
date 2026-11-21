@@ -337,7 +337,8 @@ function sendRecords() {
     let foundToday = false
     // Freeze this transfer: it is a complete replacement snapshot.
     let snapshotAnchor = savedAnchor
-    let snapshotSeconds = savedSeconds.slice(0)
+    let snapshotSeconds = blankSeconds()
+    for (let i = 0; i < DAYS; i++) snapshotSeconds[i] = savedSeconds[i]
     let sent = 0
     let todaySerial = keySerial(today)
     bluetooth.uartWriteLine("DATE:" + getClockDate())
