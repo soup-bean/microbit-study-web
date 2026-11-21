@@ -1,69 +1,87 @@
-// HC-SR04 + HC-SR501 interference isolation / micro:bit V2 MakeCode JavaScript
-// Same verified wiring: ultrasonic TRIG=P1, ECHO via 3x10k divider to P2;
-// PIR OUT=P8, both sensors powered from board 5V/GND.
-// A toggles ultrasonic distance measurements every 3 seconds.
-// B displays latest distance (cm) and current PIR 0/1.
-// LED shows PIR state as check/X when that state changes.
-// The PIR keeps being sampled every 100ms, even when ultrasound is enabled.
-// No RTC, FlashStorage, BLE extensions or continuous serial output.
+// HC-SR04 + HC-SR501 isolated polling (BBC micro:bit V2 / MakeCode JS)
+// Both sensors stay wired: HC-SR04 TRIG=P1, ECHO=3x10k divider -> P2;
+// PIR OUT=P8. Sensors share 5V and GND. Do NOT connect 5V ECHO directly to P2.
+// Test only; RTC, flash storage and Bluetooth are not included.
+//
+// PIR is sampled about once every 3 seconds, then ultrasound is triggered
+// 200ms later (only when enabled). This does not repair wrong distance echoes.
+// A: toggle ultrasound measurement on/off. B: display latest D and P.
+// A+B: display raw echo pulse length in microseconds (0 = timeout).
 
-let ultrasoundOn = false
-let latestDistance = -1
-let lastPir = -1
+let ultrasonicEnabled = false
+let distanceCm = -1
+let echoUs = 0
+let pirValue = 0
+let lastPirShown = -1
 
 pins.digitalWritePin(DigitalPin.P1, 0)
 pins.setPull(DigitalPin.P8, PinPullMode.PullDown)
 
-function distanceCm(): number {
+function measureUltrasound() {
     pins.digitalWritePin(DigitalPin.P1, 0)
     control.waitMicros(2)
     pins.digitalWritePin(DigitalPin.P1, 1)
     control.waitMicros(10)
     pins.digitalWritePin(DigitalPin.P1, 0)
-    let us = pins.pulseIn(DigitalPin.P2, PulseValue.High, 25000)
-    if (us == 0) return -1
-    let cm = Math.round(us / 58)
-    if (cm < 2 || cm > 400) return -1
-    return cm
+
+    echoUs = pins.pulseIn(DigitalPin.P2, PulseValue.High, 25000)
+    if (echoUs == 0) {
+        distanceCm = -1
+    } else {
+        let cm = Math.round(echoUs / 58)
+        if (cm < 2 || cm > 400) {
+            distanceCm = -1
+        } else {
+            distanceCm = cm
+        }
+    }
 }
 
 input.onButtonPressed(Button.A, function () {
-    ultrasoundOn = !ultrasoundOn
-    if (ultrasoundOn) {
-        basic.showString("ON")
+    ultrasonicEnabled = !ultrasonicEnabled
+    if (ultrasonicEnabled) {
+        basic.showString("U ON")
     } else {
         pins.digitalWritePin(DigitalPin.P1, 0)
-        basic.showString("OFF")
+        basic.showString("U OFF")
     }
 })
 
 input.onButtonPressed(Button.B, function () {
-    let pir = pins.digitalReadPin(DigitalPin.P8)
-    if (latestDistance < 0) {
-        basic.showString("D NO P " + pir)
+    if (distanceCm < 0) {
+        basic.showString("D NO P " + pirValue)
     } else {
-        basic.showString("D " + latestDistance + " P " + pir)
+        basic.showString("D " + distanceCm + " P " + pirValue)
     }
 })
 
+input.onButtonPressed(Button.AB, function () {
+    basic.showNumber(echoUs)
+})
+
 basic.forever(function () {
-    let pir = pins.digitalReadPin(DigitalPin.P8)
-    if (pir != lastPir) {
-        lastPir = pir
-        if (pir == 1) {
+    // Only sample the PIR once per cycle, not every 100ms.
+    pirValue = pins.digitalReadPin(DigitalPin.P8)
+    if (pirValue != lastPirShown) {
+        lastPirShown = pirValue
+        if (pirValue == 1) {
             basic.showIcon(IconNames.Yes)
         } else {
             basic.showIcon(IconNames.No)
         }
     }
-    basic.pause(100)
-})
 
-basic.forever(function () {
-    if (ultrasoundOn) {
-        latestDistance = distanceCm()
+    // Offset the ultrasonic trigger from the moment the PIR is sampled.
+    basic.pause(200)
+    if (ultrasonicEnabled) {
+        measureUltrasound()
     }
-    basic.pause(3000)
+
+    // Debugging via MakeCode serial console if attached over USB.
+    serial.writeLine("CM:" + distanceCm + " US:" + echoUs + " PIR:" + pirValue +
+        " ULTRA:" + (ultrasonicEnabled ? 1 : 0))
+
+    basic.pause(2800)
 })
 
 basic.showString("DUAL")
