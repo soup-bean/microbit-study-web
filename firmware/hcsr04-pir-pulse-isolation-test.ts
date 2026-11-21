@@ -5,8 +5,7 @@
 //
 // PIR is sampled about once every 3 seconds, then ultrasound is triggered
 // 200ms later (only when enabled). This does not repair wrong distance echoes.
-// A: toggle ultrasound measurement on/off. B: display latest D and P.
-// A+B: display raw echo pulse length in microseconds (0 = timeout).
+// A: toggle ultrasound measurement on/off. B: show latest D, P and raw echo pulse time (US).
 
 let ultrasonicEnabled = false
 let distanceCm = -1
@@ -47,16 +46,14 @@ input.onButtonPressed(Button.A, function () {
     }
 })
 
+// B alone shows distance, PIR and raw ultrasound time (microseconds).
+// Avoid A+B: on real hardware the two presses may register separately.
 input.onButtonPressed(Button.B, function () {
     if (distanceCm < 0) {
-        basic.showString("D NO P " + pirValue)
+        basic.showString("D NO P " + pirValue + " U " + echoUs)
     } else {
-        basic.showString("D " + distanceCm + " P " + pirValue)
+        basic.showString("D " + distanceCm + " P " + pirValue + " U " + echoUs)
     }
-})
-
-input.onButtonPressed(Button.AB, function () {
-    basic.showNumber(echoUs)
 })
 
 basic.forever(function () {
