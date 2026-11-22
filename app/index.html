@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f8f5">
+  <meta name="description" content="micro:bit 독서대에서 측정한 공부 시간과 사용자 상태를 확인하세요.">
+  <title>Smart Study · 독서대</title>
+  <link rel="icon" type="image/svg+xml" href="./icon.svg">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M3.5 5.5C6.7 4.5 9.1 4.8 12 6.5c2.9-1.7 5.3-2 8.5-1v13c-3-.9-5.9-.4-8.5 1.1-2.6-1.5-5.5-2-8.5-1.1v-13Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 6.5v12.1" stroke="currentColor" stroke-width="1.7"/></svg>
+        </div>
+        <div><strong>Smart Study</strong><small>나의 스마트 독서대</small></div>
+      </div>
+      <span class="connection-pill" id="connection-badge" data-connection="idle"><span class="status-dot"></span><span id="connection-label">연결 전</span></span>
+    </header>
+
+    <section class="hero" aria-labelledby="today-title">
+      <div class="hero-heading"><p class="kicker" id="today-title">오늘의 공부 시간</p><span class="date-note">오전 5시 기준</span></div>
+      <output id="today-total" class="time-hero" aria-live="polite">--:--:--</output>
+      <p id="today-caption" class="hero-sub">기기와 연결하면 누적 시간을 확인할 수 있어요.</p>
+      <div class="state-surface" data-presence="UNKNOWN" id="presence-surface">
+        <span class="state-symbol" id="state-symbol" aria-hidden="true">—</span>
+        <div class="state-copy"><strong id="presence-label">상태 확인 전</strong><small id="presence-detail">마이크로비트의 상태 신호를 기다리는 중</small></div>
+        <span class="live-label" id="state-recency">—</span>
+      </div>
+    </section>
+
+    <section class="connection-panel" aria-labelledby="connect-title">
+      <div class="panel-heading"><h2 id="connect-title">독서대 연결</h2><span class="muted-sm">Bluetooth</span></div>
+      <div class="button-grid">
+        <button id="connect" class="button primary" type="button">독서대 연결하기</button>
+        <button id="refresh" class="button secondary" type="button" disabled>기록 새로고침</button>
+      </div>
+      <p id="connection-detail" class="fine-print" role="status" aria-live="polite">안드로이드 Chrome에서 연결할 수 있어요.</p>
+      <button id="disconnect" class="subtle-action" type="button" disabled>연결 해제</button>
+    </section>
+
+    <section class="week-panel" aria-labelledby="week-title">
+      <div class="panel-heading">
+        <div><h2 id="week-title">최근 7일</h2><p class="panel-sub">날짜별 공부 시간을 비교해 보세요.</p></div>
+        <span id="week-total" class="week-total">합계 0시간 0분</span>
+      </div>
+      <div id="week-chart" class="week-chart" aria-label="최근 7일 공부 시간 막대그래프"></div>
+      <div class="list-heading"><span>날짜별 기록</span><span>공부 시간</span></div>
+      <ol id="day-list" class="day-list" aria-label="날짜별 누적 공부 시간"></ol>
+      <p id="record-status" class="fine-print" role="status" aria-live="polite">이 기기의 기록을 불러오면 표시돼요.</p>
+      <div class="record-actions">
+        <button id="export" class="button tertiary" type="button" disabled>CSV로 기록 저장</button>
+        <span class="fine-print">확인한 기록은 이 브라우저에만 보관돼요.</span>
+      </div>
+    </section>
+
+    <section class="tools-panel" aria-labelledby="settings-title">
+      <div class="panel-heading"><h2 id="settings-title">기기 설정</h2><span class="muted-sm">필요할 때만</span></div>
+      <div class="setting-row">
+        <div><strong>RTC 시각 맞추기</strong><small>휴대폰의 한국 시각을 독서대로 전송</small></div>
+        <button id="sync-time" class="button secondary small" type="button" disabled>시간 동기화</button>
+      </div>
+      <p class="fine-print" id="sync-status" role="status" aria-live="polite">연결 후 동기화할 수 있어요.</p>
+
+      <details class="advanced">
+        <summary>개발자용 통신 진단 <span class="chevron" aria-hidden="true">⌄</span></summary>
+        <div class="advanced-body">
+          <p class="fine-print">장치에서 수신한 가장 최근 메시지</p>
+          <output id="latest" class="raw-message">아직 수신한 메시지가 없습니다.</output>
+          <div class="log-heading"><strong>통신 로그</strong><button id="clear-log" class="subtle-action" type="button">로그 지우기</button></div>
+          <ol id="log" class="log-list" aria-label="Bluetooth 통신 로그"></ol>
+          <details class="boundary-options">
+            <summary>RTC 오전 5시 경계 시험</summary>
+            <p class="warning">시험용 시각으로 RTC를 변경합니다. 실제 공부 기록에 영향을 줄 수 있어요. 시험 후 반드시 현재 시각으로 동기화하세요.</p>
+            <button id="boundary-test" class="button tertiary" type="button" disabled>RTC를 04:59:30으로 설정</button>
+            <p id="boundary-status" class="fine-print">시험하지 않음</p>
+          </details>
+        </div>
+      </details>
+    </section>
+
+    <footer class="footer">
+      <p>독서대는 스마트폰이 연결되지 않아도 시간을 측정해요. 앱에는 기록을 가져온 시점의 누적값이 표시됩니다.</p>
+      <p>기기에는 최근 7일, 이 브라우저에는 확인한 이전 기록을 보관합니다. 장기 보관이 필요한 경우 CSV로 저장해 주세요.</p>
+      <p class="version">Smart Study · 앱 시험 버전 1.0</p>
+    </footer>
+  </main>
+</body>
+</html>
