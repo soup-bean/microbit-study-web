@@ -25,15 +25,15 @@
       <p class="hint">자동 동기화는 하지 않습니다. 기기에서 SYNC:OK 응답을 받아야 완료로 표시됩니다. 휴대폰 시각이 정확해야 합니다.</p>
     </section>
     <section aria-labelledby="days-title">
-      <h2 id="days-title">03 최근 7일 공부 시간 · 시험</h2>
-      <p class="hint">마이크로비트 A: +5분, A+B: +1분, B: 날짜별 기록 전송. 실제 센서 측정은 아직 아닙니다.</p>
+      <h2 id="days-title">03 최근 7일 자동 공부 시간</h2>
+      <p class="hint">센서로 공부 시간을 자동 측정합니다. HERE/STILL에서는 누적하며, WAIT 후 복귀하면 유예 구간을 포함하고 AWAY이면 제외합니다. A: 상태 확인, B: 기록 저장·전송. 수동 시간 추가 기능은 없습니다.</p>
       <div class="actions"><button id="get-records" type="button" disabled>저장 기록 가져오기</button></div>
       <p id="records-status" role="status" aria-live="polite">연결 후 B 버튼 또는 기록 요청 버튼으로 읽을 수 있습니다.</p>
       <ol id="days" aria-label="날짜별 공부 시간"></ol>
       <p class="hint">날짜별 누적값을 교체 표시하며 중복 합산하지 않습니다. 아직 웹에 영구 저장하지 않으므로 새로고침 시 사라집니다.</p>
       <details class="test-options">
         <summary>고급 · 오전 5시 날짜 변경 시험</summary>
-        <p class="hint">RTC를 시험용 04:59:30으로 바꿉니다. 05:00 전후에 A/B로 기록을 확인하고, 끝나면 반드시 RTC 시간 동기화 버튼으로 실제 한국 시각을 복원하세요. 시험용 시간도 FlashStorage에 저장됩니다.</p>
+        <p class="hint">RTC를 시험용 04:59:30으로 바꿉니다. 센서가 HERE/STILL로 판단하면 시험 중에도 공부 시간이 기록될 수 있습니다. 실제 학습 기록을 관리하는 중에는 사용하지 마세요. 시험 후 반드시 실제 한국 시각으로 동기화해 주세요.</p>
         <button id="boundary-test" class="secondary" type="button" disabled>RTC를 04:59:30으로 설정</button>
         <p id="boundary-status" role="status">시험 미실행</p>
       </details>
@@ -49,7 +49,7 @@
       <p class="hint">메모리에 최근 300건만 표시합니다. 조각 수신도 기록하며, 완성 메시지는 LF / CRLF 줄바꿈으로 구분합니다.</p>
       <ol id="log" aria-label="통신 로그"></ol>
     </section>
-    <footer>시험용 누적값은 micro:bit FlashStorage에 저장됩니다. 웹사이트의 기록 표시는 메모리에만 유지되며 외부 서버로 전송하지 않습니다.</footer>
+    <footer>학습 누적값은 micro:bit FlashStorage에 주기적으로 저장됩니다. 최근 5분 이내의 미저장 기록은 갑작스러운 전원 차단 시 일부 손실될 수 있습니다. 웹의 기록 표시는 메모리에만 유지되며 외부 서버로 전송하지 않습니다.</footer>
   </main>
 </body>
 </html>

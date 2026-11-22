@@ -162,7 +162,7 @@ function processStudyLine(line) {
   }
   if (line === 'TEST:OK') {
     boundaryPending = true;
-    ui['boundary-status'].textContent = '시험 시각 04:59:30 적용. 05:00 이전·이후에 A/B로 확인한 뒤 반드시 RTC 시간을 다시 동기화해 주세요.';
+    ui['boundary-status'].textContent = '시험 시각 04:59:30 적용. 센서의 자동 기록이 시험 데이터로 저장될 수 있으니 확인 후 반드시 실제 RTC 시각으로 복원하세요.';
   } else if (line === 'TEST:ERR') {
     ui['boundary-status'].textContent = '경계 시험 설정 실패. RTC 날짜를 확인해 주세요.';
   }
@@ -275,7 +275,7 @@ async function connect() {
     if (!selected.gatt.connected || device !== selected) throw new Error('설정 중 연결이 해제되었습니다.');
     ready = true;
     connecting = false;
-    state('connected', '연결 성공', `${selected.name || 'micro:bit'} 연결 완료. B 버튼을 눌러 READ:240을 확인하세요.`);
+    state('connected', '연결 성공', `${selected.name || 'micro:bit'} 연결 완료. 저장 기록 가져오기 또는 B 버튼으로 누적 기록을 조회하세요.`);
     log('연결', 'UART INDICATE 수신 및 WRITE 송신 준비 완료');
     ui['sync-status'].textContent = '연결됨 · 버튼을 누르면 휴대폰의 한국 시각을 RTC에 보냅니다.';
   } catch (error) {
