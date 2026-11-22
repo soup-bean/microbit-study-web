@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "Smart Study · 나의 스마트 독서대",
+  "short_name": "Smart Study",
+  "description": "micro:bit 독서대의 공부 시간과 사용자 상태를 확인하는 앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f8f5",
+  "theme_color": "#f6f8f5",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
